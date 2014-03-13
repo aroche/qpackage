@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_qpackage.ui'
 #
-# Created: Wed Mar 12 14:33:36 2014
+# Created: Thu Mar 13 10:37:56 2014
 #      by: PyQt4 UI code generator 4.8.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -17,30 +17,29 @@ except AttributeError:
 class Ui_qpackage(object):
     def setupUi(self, qpackage):
         qpackage.setObjectName(_fromUtf8("qpackage"))
-        qpackage.resize(400, 300)
-        self.widget = QtGui.QWidget(qpackage)
-        self.widget.setGeometry(QtCore.QRect(10, 10, 381, 281))
-        self.widget.setObjectName(_fromUtf8("widget"))
-        self.verticalLayout = QtGui.QVBoxLayout(self.widget)
-        self.verticalLayout.setMargin(0)
+        qpackage.resize(583, 412)
+        self.verticalLayout_2 = QtGui.QVBoxLayout(qpackage)
+        self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
+        self.verticalLayout = QtGui.QVBoxLayout()
         self.verticalLayout.setObjectName(_fromUtf8("verticalLayout"))
         self.horizontalLayout = QtGui.QHBoxLayout()
         self.horizontalLayout.setObjectName(_fromUtf8("horizontalLayout"))
-        self.lineEdit = QtGui.QLineEdit(self.widget)
+        self.lineEdit = QtGui.QLineEdit(qpackage)
         self.lineEdit.setObjectName(_fromUtf8("lineEdit"))
         self.horizontalLayout.addWidget(self.lineEdit)
-        self.pushButton = QtGui.QPushButton(self.widget)
+        self.pushButton = QtGui.QPushButton(qpackage)
         self.pushButton.setObjectName(_fromUtf8("pushButton"))
         self.horizontalLayout.addWidget(self.pushButton)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.tableView = QtGui.QTableView(self.widget)
+        self.tableView = QtGui.QTableView(qpackage)
         self.tableView.setObjectName(_fromUtf8("tableView"))
         self.verticalLayout.addWidget(self.tableView)
-        self.buttonBox = QtGui.QDialogButtonBox(self.widget)
+        self.buttonBox = QtGui.QDialogButtonBox(qpackage)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName(_fromUtf8("buttonBox"))
         self.verticalLayout.addWidget(self.buttonBox)
+        self.verticalLayout_2.addLayout(self.verticalLayout)
 
         self.retranslateUi(qpackage)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), qpackage.accept)

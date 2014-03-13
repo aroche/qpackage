@@ -53,17 +53,34 @@ class LayersTableModel(QAbstractTableModel):
         if (role == Qt.DisplayRole and orientation == Qt.Horizontal):
             return self.headers[section]
             
+    def flags(self, index):
+        col = index.column()
+        res = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if col == 0:
+            res = res | Qt.ItemIsEditable | Qt.ItemIsUserCheckable 
+        if col == 3:
+            res = res | Qt.ItemIsEditable
+        return res
+            
     def data(self, index, role):
         row = index.row()
         col = index.column()
         layer = self.layerRegistry.mapLayer(self.layerIds[row])
         
         if col == 0 and role == Qt.CheckStateRole:
-            return Qt.Checked
+            if self.layerData[row]['stored']:
+                return Qt.Checked
+            else: return Qt.Unchecked
             
         if (col == 1):
             if (role == Qt.DisplayRole):            
                 return layer.name()
+                
+    def setData(self, index, value, role):
+        if role == Qt.CheckStateRole and index.column() == 0:
+            self.layerData[index.row()]['stored'] = value
+        self.emit(SIGNAL("dataChanged"))
+        return True
             
         
 
