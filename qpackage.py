@@ -58,7 +58,7 @@ class LayerFeatureSelectDelegate(QItemDelegate):
 
 
 class LayersTableModel(QAbstractTableModel):
-    headers = ["Save data", "Layer name", "layer type", "Save"]
+    headers = ["Save data", "Layer name", "Source", "Save"]
     
     def __init__(self, layerRegistry):
         QAbstractTableModel.__init__(self)
@@ -103,6 +103,9 @@ class LayersTableModel(QAbstractTableModel):
             if (role == Qt.DisplayRole):            
                 return layer.name()
                 
+        if col == 2 and role == Qt.DisplayRole:
+            return layer.publicSource()
+                
         if col == 3 and role == Qt.DisplayRole:
             return self.layerData[row]['features']
                 
@@ -115,9 +118,6 @@ class LayersTableModel(QAbstractTableModel):
         self.emit(SIGNAL("dataChanged"))
         return True
         
-            
-        
-
 
 class qpackage:
 
