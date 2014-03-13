@@ -30,6 +30,33 @@ from qpackagedialog import qpackageDialog
 import os.path
 
 
+# A comboBox delegate for changing feature selection mode
+class LayerFeatureSelectDelegate(QItemDelegate):
+    states = ('all', 'selected', 'displayed')
+    
+    def createEditor(self, parent, option, index):
+        self.editor = QComboBox(parent)
+        self.editor.addItems(self.states)
+        self.connect(self.editor, SIGNAL("currentIndexChanged(int)"), self, SLOT("currentIndexChanged()"))
+        return self.editor
+        
+    def setEditorData(self, editor, index):
+        editor.blockSignals(True)
+        val = index.model().data(index)
+        editor.setCurrentIndex(self.states.index(val))
+        editor.blockSignals(False)
+        
+    def setModelData(self, editor, model, index):
+        model.setData(index, self.states[editor.currentIndex()])
+        
+    @pyqtSlot()
+    def currentIndexChanged(self):
+        self.commitData.emit(self.sender())
+        
+    
+
+
+
 class LayersTableModel(QAbstractTableModel):
     headers = ["Save data", "Layer name", "layer type", "Save"]
     
@@ -62,7 +89,7 @@ class LayersTableModel(QAbstractTableModel):
             res = res | Qt.ItemIsEditable
         return res
             
-    def data(self, index, role):
+    def data(self, index, role = Qt.DisplayRole):
         row = index.row()
         col = index.column()
         layer = self.layerRegistry.mapLayer(self.layerIds[row])
@@ -76,11 +103,18 @@ class LayersTableModel(QAbstractTableModel):
             if (role == Qt.DisplayRole):            
                 return layer.name()
                 
-    def setData(self, index, value, role):
+        if col == 3 and role == Qt.DisplayRole:
+            return self.layerData[row]['features']
+                
+    def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.CheckStateRole and index.column() == 0:
             self.layerData[index.row()]['stored'] = value
+        if role == Qt.EditRole and index.column() == 3:
+            self.layerData[index.row()]['features'] = value
+        
         self.emit(SIGNAL("dataChanged"))
         return True
+        
             
         
 
@@ -117,6 +151,8 @@ class qpackage:
         # Add toolbar button and menu item
         self.iface.addToolBarIcon(self.action)
         self.iface.addPluginToMenu(u"&QPackage", self.action)
+        
+        self.dlg.tableView.setItemDelegateForColumn(3, LayerFeatureSelectDelegate(self.dlg.tableView))
         
 
     def unload(self):
