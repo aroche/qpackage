@@ -29,8 +29,6 @@ import resources_rc
 from qpackagedialog import qpackageDialog
 import os.path
 
-import qpackagethread
-
 
 class LayersTableModel(QAbstractTableModel):
     headers = ["Save data", "Layer name", "layer type", "Save"]
@@ -38,22 +36,21 @@ class LayersTableModel(QAbstractTableModel):
     def __init__(self, layerRegistry):
         QAbstractTableModel.__init__(self)
         self.layerRegistry = layerRegistry
-        layers = layerRegistry.mapLayers
+        layers = layerRegistry.mapLayers()
         self.layerIds = layers.keys()
         self.layerData = []
         for id in self.layerIds:
             layer = layers[id]
             self.layerData.append({'stored': True, 'features': 'all'})
     
-    def columnCount(self):
+    def columnCount(self, parent):
         return 4
         
-    def rowCount(self):
+    def rowCount(self, parent):
         return self.layerRegistry.count()
         
     def headerData(self, section, orientation, role):
         if (role == Qt.DisplayRole and orientation == Qt.Horizontal):
-            cols = 
             return self.headers[section]
             
     def data(self, index, role):
@@ -90,7 +87,7 @@ class qpackage:
                 QCoreApplication.installTranslator(self.translator)
 
         # Create the dialog (after translation) and keep reference
-        self.dlg = qpackageDialog(self.iface)
+        self.dlg = qpackageDialog()
 
     def initGui(self):
         # Create action that will start plugin configuration
@@ -104,7 +101,6 @@ class qpackage:
         self.iface.addToolBarIcon(self.action)
         self.iface.addPluginToMenu(u"&QPackage", self.action)
         
-        self.createTable()
 
     def unload(self):
         # Remove the plugin menu item and icon
@@ -122,12 +118,13 @@ class qpackage:
     def createTable(self):
         # populates the table with the layers of the project
         model = LayersTableModel(QgsMapLayerRegistry.instance())
-        self.iface.tableView.setModel(model)
+        self.dlg.tableView.setModel(model)
         
     
     
     def run(self):
         # show the dialog
+        self.createTable()
         self.dlg.show()
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -135,22 +132,4 @@ class qpackage:
         if result == 1:
             self.startCopy()
             
-    def processFinished(self):
-        self.stopProcessing()
-        self.restoreGui()
 
-    def processInterrupted(self):
-        self.restoreGui()
-
-    def processError(self, message):
-        QMessageBox.warning(self,
-                            self.tr("QConsolidate: Error"),
-                            message
-                           )
-        self.restoreGui()
-        return
-
-    def stopProcessing(self):
-        if self.workThread is not None:
-            self.workThread.stop()
-            self.workThread = None
