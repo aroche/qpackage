@@ -27,6 +27,7 @@ from qgis.core import *
 import resources_rc
 # Import the code for the dialog
 from qpackagedialog import qpackageDialog
+import qpackageproject
 import os.path
 
 
@@ -163,18 +164,22 @@ class qpackage:
     # run method that performs all the real work
     def startCopy(self):
         # copy project file
+        # temp : 
+        filePath = "qpackageTest.qgs"
         projectFile = QgsProject.instance().fileName()
         f = QFile(projectFile)
-        newProjectFile = outputDir + "/" + QFileInfo(projectFile).fileName()
-        f.copy(newProjectFile)        
+        if QFile.exists(filePath):
+            QFile.remove(filePath)
+        f.copy(filePath)  
+        
+        project = qpackageproject.QPackageProject(filePath)
         
     def createTable(self):
         # populates the table with the layers of the project
         model = LayersTableModel(QgsMapLayerRegistry.instance())
         self.dlg.tableView.setModel(model)
+
         
-    
-    
     def run(self):
         # show the dialog
         self.createTable()
