@@ -22,6 +22,7 @@
 
 from PyQt4.QtCore import *
 from PyQt4.QtXml import *
+from qgis.core import *
 from pyspatialite import dbapi2 as db
 import os.path
 
@@ -42,19 +43,41 @@ class QPackageProject:
             return
 
         self.doc = QDomDocument()
-        setOk, errorString, errorLine, errorColumn = doc.setContent(f, True)
+        setOk, errorString, errorLine, errorColumn = self.doc.setContent(f, True)
         if not setOk:
             msg = "Parse error at line %d, column %d:\n%s" % (errorLine, errorColumn, errorString)
             # self.processError.emit(msg)
+            print msg
             return False
 
         f.close()
+        
+        root = self.doc.documentElement()
+
+        # ensure that relative path used
+        e = root.firstChildElement("properties")
+        e.firstChildElement("Paths").firstChild().firstChild().setNodeValue("false")
+
+        # get layers section in project
+        self.layerElement = root.firstChildElement("projectlayers")
         return True
+    
+    def saveProject(self):
+        f = QFile(self.projectFile)
+        if not f.open(QIODevice.WriteOnly | QIODevice.Text):
+            msg = "Cannot write file %s:\n%s." % (self.projectFile, f.errorString())
+            #self.processError.emit(msg)
+            print msg
+            return
+
+        out = QTextStream(f)
+        self.doc.save(out, 4)
+        f.close()
         
     def createDB(self):
         (root, ext) = os.path.splitext(self.projectFile)
         self.slPath = root + '.sqlite'
-        # TODO : find a better way to handle existing db becaus of time consuming process
+        # TODO : better way to handle existing db because of time consuming process
         if QFile.exists(self.slPath):
             QFile.remove(self.slPath)
         self.dbConnection = db.connect(self.slPath)
@@ -62,34 +85,38 @@ class QPackageProject:
         cur.execute("SELECT initspatialmetadata()")
         self.dbConnection.commit()
         
-    def copyGenericVectorLayer(self, layerElement, vLayer, layerName):
+    def copyGenericVectorLayer(self, vLayer):
         crs = vLayer.crs()
         enc = vLayer.dataProvider().encoding()
+        layerId = vLayer.id()
         # outFile = "%s/%s.shp" % (self.layersDir, layerName)
         options = ("SPATIAL_INDEX=YES",)
+        errmsg = ""
         error = QgsVectorFileWriter.writeAsVectorFormat(vLayer, self.slPath, enc, crs,
-            "spatialite", options)
+            driverName="SQLite", datasourceOptions=("SPATIALITE=YES",),
+            newFilename=layerId,
+            layerOptions=options, errorMessage=errmsg)
         if error != QgsVectorFileWriter.NoError:
-            msg = self.tr("Cannot copy layer %s") % layerName
+            msg = "Cannot copy layer %s" % layerId
             #self.processError.emit(msg)
-            print msg
+            print msg, error
             return
 
-        # update project TODO
-        layerNode = self.findLayerInProject(layerElement, layerName)
+        # update project
+        layerNode = self.findLayerInProject(layerId)
         tmpNode = layerNode.firstChildElement("datasource")
-        p = "./layers/%s.shp" % layerName
+        p = "dbname='%s' table='%s' (geometry) sql=" % (self.slPath, layerId)
         tmpNode.firstChild().setNodeValue(p)
         tmpNode = layerNode.firstChildElement("provider")
         tmpNode.setAttribute("encoding", enc)
-        tmpNode.firstChild().setNodeValue("ogr")
+        tmpNode.firstChild().setNodeValue("spatialite")
         
         
-    def findLayerInProject(self, layerElement, layerName):
-        child = layerElement.firstChildElement()
+    def findLayerInProject(self, layerId):
+        child = self.layerElement.firstChildElement()
         while not child.isNull():
-            nm = child.firstChildElement("layername")
-            if nm.text() == layerName:
+            nm = child.firstChildElement("id")
+            if nm.text() == layerId:
                 return child
             child = child.nextSiblingElement()
         return None

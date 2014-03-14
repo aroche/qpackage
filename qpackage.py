@@ -54,28 +54,36 @@ class LayerFeatureSelectDelegate(QItemDelegate):
     def currentIndexChanged(self):
         self.commitData.emit(self.sender())
         
-    
 
-
+class CandidateLayer:
+    def __init__(self, mapLayer):
+        self.layer = mapLayer
+        self.stored = True
+        self.features = 'all'
+        
+        
 
 class LayersTableModel(QAbstractTableModel):
     headers = ["Save data", "Layer name", "Source", "Save"]
     
     def __init__(self, layerRegistry):
         QAbstractTableModel.__init__(self)
-        self.layerRegistry = layerRegistry
+        #self.layerRegistry = layerRegistry
         layers = layerRegistry.mapLayers()
         self.layerIds = layers.keys()
         self.layerData = []
         for id in self.layerIds:
             layer = layers[id]
-            self.layerData.append({'stored': True, 'features': 'all'})
+            # TODO handle defaults according to type
+            #if layer.type() == QgsMapLayer.VectorLayer:
+                
+            self.layerData.append(CandidateLayer(layer))
     
     def columnCount(self, parent):
         return 4
         
     def rowCount(self, parent):
-        return self.layerRegistry.count()
+        return len(self.layerData)
         
     def headerData(self, section, orientation, role):
         if (role == Qt.DisplayRole and orientation == Qt.Horizontal):
@@ -93,10 +101,10 @@ class LayersTableModel(QAbstractTableModel):
     def data(self, index, role = Qt.DisplayRole):
         row = index.row()
         col = index.column()
-        layer = self.layerRegistry.mapLayer(self.layerIds[row])
+        layer = self.layerData[row].layer
         
         if col == 0 and role == Qt.CheckStateRole:
-            if self.layerData[row]['stored']:
+            if self.layerData[row].stored:
                 return Qt.Checked
             else: return Qt.Unchecked
             
@@ -108,16 +116,17 @@ class LayersTableModel(QAbstractTableModel):
             return layer.publicSource()
                 
         if col == 3 and role == Qt.DisplayRole:
-            return self.layerData[row]['features']
+            return self.layerData[row].features
                 
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.CheckStateRole and index.column() == 0:
-            self.layerData[index.row()]['stored'] = value
+            self.layerData[index.row()].stored = value
         if role == Qt.EditRole and index.column() == 3:
-            self.layerData[index.row()]['features'] = value
+            self.layerData[index.row()].features = value
         
         self.emit(SIGNAL("dataChanged"))
-        return True
+        return True    
+    
         
 
 class qpackage:
@@ -172,7 +181,17 @@ class qpackage:
             QFile.remove(filePath)
         f.copy(filePath)  
         
+        print os.path.abspath(filePath)
+        
         project = qpackageproject.QPackageProject(filePath)
+        
+        for layer in self.dlg.tableView.model().layerData:
+            if layer.stored:
+                if layer.layer.type() == QgsMapLayer.VectorLayer:
+                    project.copyGenericVectorLayer(layer.layer)
+                    break #tmp
+                
+        project.saveProject()
         
     def createTable(self):
         # populates the table with the layers of the project
