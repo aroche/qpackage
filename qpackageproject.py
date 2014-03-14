@@ -53,10 +53,36 @@ class QPackageProject:
         
     def createDB(self):
         (root, ext) = os.path.splitext(self.projectFile)
-        self.dbConnection = db.connect(root + '.sqlite')
+        self.slPath = root + '.sqlite'
+        # TODO : find a better way to handle existing db becaus of time consuming process
+        if QFile.exists(self.slPath):
+            QFile.remove(self.slPath)
+        self.dbConnection = db.connect(self.slPath)
         cur = self.dbConnection.cursor()
         cur.execute("SELECT initspatialmetadata()")
         self.dbConnection.commit()
+        
+    def copyGenericVectorLayer(self, layerElement, vLayer, layerName):
+        crs = vLayer.crs()
+        enc = vLayer.dataProvider().encoding()
+        # outFile = "%s/%s.shp" % (self.layersDir, layerName)
+        options = ("SPATIAL_INDEX=YES",)
+        error = QgsVectorFileWriter.writeAsVectorFormat(vLayer, self.slPath, enc, crs,
+            "spatialite", options)
+        if error != QgsVectorFileWriter.NoError:
+            msg = self.tr("Cannot copy layer %s") % layerName
+            #self.processError.emit(msg)
+            print msg
+            return
+
+        # update project TODO
+        layerNode = self.findLayerInProject(layerElement, layerName)
+        tmpNode = layerNode.firstChildElement("datasource")
+        p = "./layers/%s.shp" % layerName
+        tmpNode.firstChild().setNodeValue(p)
+        tmpNode = layerNode.firstChildElement("provider")
+        tmpNode.setAttribute("encoding", enc)
+        tmpNode.firstChild().setNodeValue("ogr")
         
         
     def findLayerInProject(self, layerElement, layerName):
