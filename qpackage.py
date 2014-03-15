@@ -176,6 +176,10 @@ class qpackage:
         # temp : 
         filePath = "qpackageTest.qgs"
         projectFile = QgsProject.instance().fileName()
+        if filePath == projectFile:
+            msg = "Impossible to write on the same file as the project"
+            return
+        
         f = QFile(projectFile)
         if QFile.exists(filePath):
             QFile.remove(filePath)
@@ -191,6 +195,9 @@ class qpackage:
                     print "Copying", layer.layer.name()
                     project.copyGenericVectorLayer2(layer.layer)
                     #break #tmp
+                elif layer.layer.type() == QgsMapLayer.RasterLayer:
+                    print "Copying", layer.layer.name()
+                    project.copyRasterLayer(layer.layer)
                 
         project.saveProject()
         

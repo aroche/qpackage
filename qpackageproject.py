@@ -24,6 +24,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtXml import *
 from qgis.core import *
 from pyspatialite import dbapi2 as db
+from osgeo import gdal
 import os.path
 import pdb
 
@@ -52,7 +53,8 @@ class QPackageProject:
         if not f.open(QIODevice.ReadOnly | QIODevice.Text):
             msg = "Cannot read file %s:\n%s." % (self.projectFile, f.errorString())
             #self.processError.emit(msg)
-            return
+            print msg
+            return False
 
         self.doc = QDomDocument()
         setOk, errorString, errorLine, errorColumn = self.doc.setContent(f, True)
@@ -152,7 +154,7 @@ class QPackageProject:
                 return False
             select_ids=layer.selectedFeaturesIds()
 
-        tableName = layer.name()
+        tableName = launderName(layer.name())
        
         #Get data charset
         provider = layer.dataProvider()
@@ -260,6 +262,21 @@ class QPackageProject:
         tmpNode = layerNode.firstChildElement("provider")
         #tmpNode.setAttribute("encoding", enc)
         tmpNode.firstChild().setNodeValue("spatialite")
+        
+        return True
+    
+    def copyRasterLayer(self, layer):
+        srcPath = layer.source()
+        src = gdal.Open(srcPath)
+        driver = gdal.GetDriverByName("RASTERLITE")
+        tableName = launderName(layer.name())
+        dstPath = "RASTERLITE:%s,table=%s" % (self.slPath, tableName)
+        ds = driver.CreateCopy(dstPath, src)
+        
+        # update project
+        layerNode = self.findLayerInProject(layer.id())
+        tmpNode = layerNode.firstChildElement("datasource")
+        tmpNode.firstChild().setNodeValue(dstPath)
         
         return True
         
