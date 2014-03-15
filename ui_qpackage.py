@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'ui_qpackage.ui'
 #
-# Created: Sat Mar 15 20:39:58 2014
+# Created: Sat Mar 15 21:00:14 2014
 #      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
@@ -56,6 +56,6 @@ class Ui_qpackage(object):
         QtCore.QMetaObject.connectSlotsByName(qpackage)
 
     def retranslateUi(self, qpackage):
-        qpackage.setWindowTitle(_translate("qpackage", "qpackage", None))
+        qpackage.setWindowTitle(_translate("qpackage", "QPackage", None))
         self.browseButton.setText(_translate("qpackage", "Browse...", None))
 
