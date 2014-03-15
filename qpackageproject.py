@@ -99,10 +99,8 @@ class QPackageProject:
         cur.execute("SELECT initspatialmetadata()")
         self.dbConnection.commit()
         
-    def reconnectDB(self):
-        self.dbConnection.close()
-        self.dbConnection = db.connect(self.slPath)
         
+    # OBSOLETE
     def copyGenericVectorLayer(self, vLayer):
         crs = vLayer.crs()
         enc = vLayer.dataProvider().encoding()
@@ -112,17 +110,15 @@ class QPackageProject:
         errmsg = ""
         error = QgsVectorFileWriter.writeAsVectorFormat(vLayer, self.slPath, enc, crs,
             driverName="SQLite", datasourceOptions=("SPATIALITE=YES",),
-            newFilename=layerId,
             layerOptions=options, errorMessage=errmsg)
         
-        self.reconnectDB()
         if error != QgsVectorFileWriter.NoError:
             msg = "Cannot copy layer %s" % layerId
             #self.processError.emit(msg)
             print msg, error
             return
         
-        # process to rename the tables
+        # rename the tables
         (tableName, ext) = os.path.splitext(os.path.basename(self.slPath))
         tableName = launderName(tableName)
         newName = launderName(vLayer.name())
@@ -146,8 +142,116 @@ class QPackageProject:
         tmpNode.setAttribute("encoding", enc)
         tmpNode.firstChild().setNodeValue("spatialite")
         
-        
+    # adapted from QSpatialite plugin
+    def copyGenericVectorLayer2(self, layer):
+        selected = False
+        selected_ids=[]
+        if selected==True :
+            if layer.selectedFeatureCount()==0:
+                pop_up_info("No selected item in Qgis layer: %s)"%layer.name(),self.parent)
+                return False
+            select_ids=layer.selectedFeaturesIds()
+
+        tableName = layer.name()
+       
+        #Get data charset
+        provider = layer.dataProvider()
+        #charset=provider.encoding()
     
+        #Get fields with corresponding types
+        fields=[]
+        fieldsNames=[]
+        mapinfoDAte=[]
+        for id,name in enumerate(provider.fields().toList()):
+            fldName = unicode(name.name()).replace("'"," ").replace('"'," ")
+            #Avoid two cols with same name:
+            while fldName.upper() in fieldsNames:
+                fldName='%s_2'%fldName
+            fldType=name.type()
+            fldTypeName=unicode(name.typeName()).upper()
+            if fldTypeName=='DATE' and unicode(provider.storageType()).lower()==u'mapinfo file'and mapinfo==True: # Mapinfo DATE compatibility
+                fldType='DATE'
+                mapinfoDAte.append([id,fldName]) #stock id and name of DATE field for MAPINFO layers
+            elif fldType in (QVariant.Char, QVariant.String): # field type is TEXT
+                fldLength=name.length()
+                fldType='TEXT(%s)'%fldLength  #Add field Length Information
+            elif fldType in (QVariant.Bool, QVariant.Int, QVariant.LongLong, QVariant.UInt, QVariant.ULongLong): # field type is INTEGER
+                fldType='INTEGER'
+            elif fldType == QVariant.Double: # field type is DOUBLE
+                fldType='REAL'
+            else: # field type is not recognized by SQLITE
+                fldType=fldTypeName
+            fields.append(""" "%s" %s """%(fldName,fldType))
+            fieldsNames.append(fldName.upper())
+
+        # is it a geometric table ?
+        geometry=False
+        if layer.hasGeometryType():
+            #Get geometry type
+            geom=['MULTIPOINT','MULTILINESTRING','MULTIPOLYGON','UnknownGeometry']
+            geometry=geom[layer.geometryType()]
+            srid=layer.crs().postgisSrid()
+
+        #select attributes to import (remove Pkuid if already exists):
+        allAttrs = provider.attributeIndexes()
+        fldDesc = provider.fieldNameIndex("PKUID")
+        if fldDesc != -1:
+            print "Pkuid already exists and will be replaced!"
+            del allAttrs[fldDesc] #remove pkuid Field
+            del fields[fldDesc] #remove pkuid Field
+        #provider.select(allAttrs)
+        #request=QgsFeatureRequest()
+        #request.setSubsetOfAttributes(allAttrs).setFlags(QgsFeatureRequest.SubsetOfAttributes)
+
+        if geometry:
+            fields.insert(0,"Geometry %s"%geometry)
+        
+        #Create new table in BD
+        cur = self.dbConnection.cursor()
+        fields=','.join(fields)
+        if len(fields)>0:
+            fields=', %s'%fields
+        cur.execute("""CREATE TABLE "%s" ( PKUID INTEGER PRIMARY KEY AUTOINCREMENT %s )"""%(tableName, fields))
+            
+        #Recover Geometry Column:
+        if geometry:
+           cur.execute("""SELECT RecoverGeometryColumn("%s",'Geometry',%s,'%s',2)"""%(tableName,srid,geometry,))
+        
+        # Retrieve every feature
+        for feat in layer.getFeatures():
+            # selected features:
+            if selected and feat.id()not in select_ids:
+                continue 
+        
+            #PKUID and Geometry     
+            values_auto=['NULL'] #PKUID value
+            if geometry:
+                geom = feat.geometry()
+                #WKB=geom.asWkb()
+                WKT=geom.exportToWkt()
+                values_auto.append('CastToMulti(GeomFromText("%s",%s))'%(WKT,srid))
+        
+            # show all attributes and their values
+            values_perso=[]
+            for val in allAttrs: # All except PKUID
+                values_perso.append(feat[val])
+            
+            #Create line in DB table
+            if len(fields)>0:
+                cur.execute("""INSERT INTO "%s" VALUES (%s,%s)"""%(tableName,','.join([unicode(value).encode('utf-8') for value in values_auto]),','.join('?'*len(values_perso))),tuple([unicode(value) for value in values_perso]))
+            else: #no attribute Datas
+                cur.execute("""INSERT INTO "%s" VALUES (%s)"""%(table_name,','.join([unicode(value).encode('utf-8') for value in values_auto])))
+
+        for date in mapinfoDAte: #mapinfo compatibility: convert date in SQLITE format (2010/02/11 -> 2010-02-11 ) or rollback if any error
+            cur.execute("""UPDATE OR ROLLBACK "%s" set '%s'=replace( "%s", '/' , '-' )""" % (tableName, date[1], date[1]))
+    
+        # add spatial index
+        if geometry:
+            cur.execute("SELECT CreateSpatialIndex('%s', '%s')" % (tableName, 'Geometry'))
+        
+        #Commit DB connection:
+        self.dbConnection.commit()
+        return True
         
         
     def findLayerInProject(self, layerId):

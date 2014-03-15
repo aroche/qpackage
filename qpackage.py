@@ -188,8 +188,9 @@ class qpackage:
         for layer in self.dlg.tableView.model().layerData:
             if layer.stored:
                 if layer.layer.type() == QgsMapLayer.VectorLayer:
-                    project.copyGenericVectorLayer(layer.layer)
-                    break #tmp
+                    print "Copying", layer.layer.name()
+                    project.copyGenericVectorLayer2(layer.layer)
+                    #break #tmp
                 
         project.saveProject()
         
