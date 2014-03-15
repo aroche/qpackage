@@ -125,7 +125,14 @@ class LayersTableModel(QAbstractTableModel):
             self.layerData[index.row()].features = value
         
         self.emit(SIGNAL("dataChanged"))
-        return True    
+        return True 
+    
+    def countLayersToProcess(self):
+        n = 0
+        for l in self.layerData:
+            if l.stored:
+                n += 1
+        return n
     
         
 
@@ -172,12 +179,22 @@ class qpackage:
 
     # run method that performs all the real work
     def startCopy(self):
+        lmodel = self.dlg.tableView.model()
+        msgBar = self.iface.messageBar().createMessage("Creating db...")
+        progress = QProgressBar()
+        progress.setMaximum(lmodel.countLayersToProcess())
+        progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+        progress.setValue(0)
+        msgBar.layout().addWidget(progress)
+        self.iface.messageBar().pushWidget(msgBar, self.iface.messageBar().INFO)
+        
         # copy project file
         # temp : 
         filePath = "qpackageTest.qgs"
         projectFile = QgsProject.instance().fileName()
         if filePath == projectFile:
             msg = "Impossible to write on the same file as the project"
+            
             return
         
         f = QFile(projectFile)
@@ -189,20 +206,23 @@ class qpackage:
         
         project = qpackageproject.QPackageProject(filePath)
         
-        for layer in self.dlg.tableView.model().layerData:
+        n = 0
+        for layer in lmodel.layerData:
             if layer.stored:
+                n += 1
+                progress.setValue(n)
+                msgBar.setText("Copying %s..." % layer.layer.name())
                 if layer.layer.type() == QgsMapLayer.VectorLayer:
-                    print "Copying", layer.layer.name()
                     project.copyGenericVectorLayer(layer.layer)
-                    #break #tmp
                 elif layer.layer.type() == QgsMapLayer.RasterLayer:
-                    print "Copying", layer.layer.name()
-                    project.copyRasterLayer(layer.layer)
+                    project.copyRasterLayer(layer.layer)                
                 
         project.saveProject()
         
+        self.iface.messageBar().clearWidgets()
+        
     def createTable(self):
-        # populates the table with the layers of the project
+        # populate the table with the layers of the project
         model = LayersTableModel(QgsMapLayerRegistry.instance())
         self.dlg.tableView.setModel(model)
 
