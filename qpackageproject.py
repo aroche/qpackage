@@ -251,6 +251,16 @@ class QPackageProject:
         
         #Commit DB connection:
         self.dbConnection.commit()
+        
+        # update project
+        layerNode = self.findLayerInProject(layer.id())
+        tmpNode = layerNode.firstChildElement("datasource")
+        p = "dbname='%s' table='%s' (geometry) sql=" % (self.slPath, tableName)
+        tmpNode.firstChild().setNodeValue(p)
+        tmpNode = layerNode.firstChildElement("provider")
+        #tmpNode.setAttribute("encoding", enc)
+        tmpNode.firstChild().setNodeValue("spatialite")
+        
         return True
         
         
