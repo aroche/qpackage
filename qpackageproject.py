@@ -25,6 +25,18 @@ from PyQt4.QtXml import *
 from qgis.core import *
 from pyspatialite import dbapi2 as db
 import os.path
+import pdb
+
+pyqtRemoveInputHook()
+
+
+# generates proper name for database
+def launderName(name):
+    r = name.lower()
+    r = r.replace("'", '_')
+    r = r.replace("#", '_')
+    r = r.replace("-", '_')
+    return r
 
 
 class QPackageProject:
@@ -63,6 +75,8 @@ class QPackageProject:
         return True
     
     def saveProject(self):
+        self.dbConnection.close()
+        
         f = QFile(self.projectFile)
         if not f.open(QIODevice.WriteOnly | QIODevice.Text):
             msg = "Cannot write file %s:\n%s." % (self.projectFile, f.errorString())
@@ -85,31 +99,55 @@ class QPackageProject:
         cur.execute("SELECT initspatialmetadata()")
         self.dbConnection.commit()
         
+    def reconnectDB(self):
+        self.dbConnection.close()
+        self.dbConnection = db.connect(self.slPath)
+        
     def copyGenericVectorLayer(self, vLayer):
         crs = vLayer.crs()
         enc = vLayer.dataProvider().encoding()
         layerId = vLayer.id()
         # outFile = "%s/%s.shp" % (self.layersDir, layerName)
-        options = ("SPATIAL_INDEX=YES",)
+        options = ("SPATIAL_INDEX=NO",)
         errmsg = ""
         error = QgsVectorFileWriter.writeAsVectorFormat(vLayer, self.slPath, enc, crs,
             driverName="SQLite", datasourceOptions=("SPATIALITE=YES",),
             newFilename=layerId,
             layerOptions=options, errorMessage=errmsg)
+        
+        self.reconnectDB()
         if error != QgsVectorFileWriter.NoError:
             msg = "Cannot copy layer %s" % layerId
             #self.processError.emit(msg)
             print msg, error
             return
+        
+        # process to rename the tables
+        (tableName, ext) = os.path.splitext(os.path.basename(self.slPath))
+        tableName = launderName(tableName)
+        newName = launderName(vLayer.name())
+        cur = self.dbConnection.cursor()
+        cur.execute("SELECT * FROM geometry_columns WHERE f_table_name=?", [tableName])
+        metadata = cur.fetchone()
+        cur.execute("SELECT discardGeometryColumn('%s', '%s');" % (tableName, metadata[1]))
+        cur.execute('ALTER TABLE "%s" RENAME TO "%s"' % (tableName, newName))
+        cur.execute("SELECT RecoverGeometryColumn('%s', '%s', %s, '%s', 2)" 
+            % (newName, metadata[1], metadata[4], metadata[2]))
+        cur.execute("SELECT CreateSpatialIndex('%s', '%s')" % (newName, metadata[1]))
+        self.dbConnection.commit()
+        
 
         # update project
         layerNode = self.findLayerInProject(layerId)
         tmpNode = layerNode.firstChildElement("datasource")
-        p = "dbname='%s' table='%s' (geometry) sql=" % (self.slPath, layerId)
+        p = "dbname='%s' table='%s' (geometry) sql=" % (self.slPath, newName)
         tmpNode.firstChild().setNodeValue(p)
         tmpNode = layerNode.firstChildElement("provider")
         tmpNode.setAttribute("encoding", enc)
         tmpNode.firstChild().setNodeValue("spatialite")
+        
+        
+    
         
         
     def findLayerInProject(self, layerId):
