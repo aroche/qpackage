@@ -22,7 +22,7 @@
         <widget class="QLineEdit" name="lineEdit"/>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton">
+        <widget class="QPushButton" name="browseButton">
          <property name="text">
           <string>Browse...</string>
          </property>

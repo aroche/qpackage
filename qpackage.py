@@ -23,6 +23,7 @@
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from qgis.core import *
+from qgis.gui import *
 # Initialize Qt resources from file resources.py
 import resources_rc
 # Import the code for the dialog
@@ -169,7 +170,10 @@ class qpackage:
         self.iface.addToolBarIcon(self.action)
         self.iface.addPluginToMenu(u"&QPackage", self.action)
         
+        self.dlg.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+        
         self.dlg.tableView.setItemDelegateForColumn(3, LayerFeatureSelectDelegate(self.dlg.tableView))
+        self.dlg.browseButton.clicked.connect(self.selectOutputFile)
         
 
     def unload(self):
@@ -190,7 +194,7 @@ class qpackage:
         
         # copy project file
         # temp : 
-        filePath = "qpackageTest.qgs"
+        filePath = self.dlg.lineEdit.text()
         projectFile = QgsProject.instance().fileName()
         if filePath == projectFile:
             msg = "Impossible to write on the same file as the project"
@@ -226,6 +230,14 @@ class qpackage:
         # populate the table with the layers of the project
         model = LayersTableModel(QgsMapLayerRegistry.instance())
         self.dlg.tableView.setModel(model)
+        
+    # open afile dialog for output project
+    def selectOutputFile(self):
+        outputFile = QFileDialog.getSaveFileName(self.dlg, "Select output project file", filter="QGIS project (*.qgs)")
+        if outputFile:
+            self.dlg.lineEdit.setText(outputFile)
+            self.dlg.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+
 
         
     def run(self):

@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui_qpackage.ui'
 #
-# Created: Thu Mar 13 10:37:56 2014
-#      by: PyQt4 UI code generator 4.8.3
+# Created: Sat Mar 15 20:39:58 2014
+#      by: PyQt4 UI code generator 4.10.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -12,7 +12,16 @@ from PyQt4 import QtCore, QtGui
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
-    _fromUtf8 = lambda s: s
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_qpackage(object):
     def setupUi(self, qpackage):
@@ -27,9 +36,9 @@ class Ui_qpackage(object):
         self.lineEdit = QtGui.QLineEdit(qpackage)
         self.lineEdit.setObjectName(_fromUtf8("lineEdit"))
         self.horizontalLayout.addWidget(self.lineEdit)
-        self.pushButton = QtGui.QPushButton(qpackage)
-        self.pushButton.setObjectName(_fromUtf8("pushButton"))
-        self.horizontalLayout.addWidget(self.pushButton)
+        self.browseButton = QtGui.QPushButton(qpackage)
+        self.browseButton.setObjectName(_fromUtf8("browseButton"))
+        self.horizontalLayout.addWidget(self.browseButton)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.tableView = QtGui.QTableView(qpackage)
         self.tableView.setObjectName(_fromUtf8("tableView"))
@@ -47,6 +56,6 @@ class Ui_qpackage(object):
         QtCore.QMetaObject.connectSlotsByName(qpackage)
 
     def retranslateUi(self, qpackage):
-        qpackage.setWindowTitle(QtGui.QApplication.translate("qpackage", "qpackage", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButton.setText(QtGui.QApplication.translate("qpackage", "Browse...", None, QtGui.QApplication.UnicodeUTF8))
+        qpackage.setWindowTitle(_translate("qpackage", "qpackage", None))
+        self.browseButton.setText(_translate("qpackage", "Browse...", None))
 
