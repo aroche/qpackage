@@ -184,9 +184,9 @@ class qpackage:
         progress = QProgressBar()
         progress.setMaximum(lmodel.countLayersToProcess())
         progress.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-        progress.setValue(0)
         msgBar.layout().addWidget(progress)
         self.iface.messageBar().pushWidget(msgBar, self.iface.messageBar().INFO)
+        progress.setValue(0)
         
         # copy project file
         # temp : 
@@ -194,7 +194,7 @@ class qpackage:
         projectFile = QgsProject.instance().fileName()
         if filePath == projectFile:
             msg = "Impossible to write on the same file as the project"
-            
+            self.iface.messageBar().pushMessage("Error", msg, level=QgsMessageBar.CRITICAL)
             return
         
         f = QFile(projectFile)
@@ -219,7 +219,8 @@ class qpackage:
                 
         project.saveProject()
         
-        self.iface.messageBar().clearWidgets()
+        msgBar.setText("All layers have been processed")
+        
         
     def createTable(self):
         # populate the table with the layers of the project
