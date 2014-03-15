@@ -193,7 +193,7 @@ class qpackage:
             if layer.stored:
                 if layer.layer.type() == QgsMapLayer.VectorLayer:
                     print "Copying", layer.layer.name()
-                    project.copyGenericVectorLayer2(layer.layer)
+                    project.copyGenericVectorLayer(layer.layer)
                     #break #tmp
                 elif layer.layer.type() == QgsMapLayer.RasterLayer:
                     print "Copying", layer.layer.name()

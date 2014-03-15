@@ -101,51 +101,9 @@ class QPackageProject:
         cur.execute("SELECT initspatialmetadata()")
         self.dbConnection.commit()
         
-        
-    # OBSOLETE
-    def copyGenericVectorLayer(self, vLayer):
-        crs = vLayer.crs()
-        enc = vLayer.dataProvider().encoding()
-        layerId = vLayer.id()
-        # outFile = "%s/%s.shp" % (self.layersDir, layerName)
-        options = ("SPATIAL_INDEX=NO",)
-        errmsg = ""
-        error = QgsVectorFileWriter.writeAsVectorFormat(vLayer, self.slPath, enc, crs,
-            driverName="SQLite", datasourceOptions=("SPATIALITE=YES",),
-            layerOptions=options, errorMessage=errmsg)
-        
-        if error != QgsVectorFileWriter.NoError:
-            msg = "Cannot copy layer %s" % layerId
-            #self.processError.emit(msg)
-            print msg, error
-            return
-        
-        # rename the tables
-        (tableName, ext) = os.path.splitext(os.path.basename(self.slPath))
-        tableName = launderName(tableName)
-        newName = launderName(vLayer.name())
-        cur = self.dbConnection.cursor()
-        cur.execute("SELECT * FROM geometry_columns WHERE f_table_name=?", [tableName])
-        metadata = cur.fetchone()
-        cur.execute("SELECT discardGeometryColumn('%s', '%s');" % (tableName, metadata[1]))
-        cur.execute('ALTER TABLE "%s" RENAME TO "%s"' % (tableName, newName))
-        cur.execute("SELECT RecoverGeometryColumn('%s', '%s', %s, '%s', 2)" 
-            % (newName, metadata[1], metadata[4], metadata[2]))
-        cur.execute("SELECT CreateSpatialIndex('%s', '%s')" % (newName, metadata[1]))
-        self.dbConnection.commit()
-        
-
-        # update project
-        layerNode = self.findLayerInProject(layerId)
-        tmpNode = layerNode.firstChildElement("datasource")
-        p = "dbname='%s' table='%s' (geometry) sql=" % (self.slPath, newName)
-        tmpNode.firstChild().setNodeValue(p)
-        tmpNode = layerNode.firstChildElement("provider")
-        tmpNode.setAttribute("encoding", enc)
-        tmpNode.firstChild().setNodeValue("spatialite")
-        
+             
     # adapted from QSpatialite plugin
-    def copyGenericVectorLayer2(self, layer):
+    def copyGenericVectorLayer(self, layer):
         selected = False
         selected_ids=[]
         if selected==True :
