@@ -62,7 +62,16 @@ class CandidateLayer:
         self.layer = mapLayer
         self.stored = True
         self.features = 'all'
+        if self.layer.type() == QgsMapLayer.RasterLayer and self.layer.providerType() != 'gdal':
+            self.stored = False
         
+    def getType(self):
+        tp = self.layer.type()
+        if tp == QgsMapLayer.VectorLayer:
+            return self.layer.storageType()
+        elif tp == QgsMapLayer.RasterLayer:
+            return self.layer.providerType()
+                
         
 
 class LayersTableModel(QAbstractTableModel):
@@ -73,6 +82,7 @@ class LayersTableModel(QAbstractTableModel):
         #self.layerRegistry = layerRegistry
         layers = layerRegistry.mapLayers()
         self.layerIds = layers.keys()
+        #pdb.set_trace()
         self.layerData = []
         for id in self.layerIds:
             layer = layers[id]
@@ -93,11 +103,15 @@ class LayersTableModel(QAbstractTableModel):
             
     def flags(self, index):
         col = index.column()
+        layer = self.layerData[index.row()].layer
         res = Qt.ItemIsSelectable | Qt.ItemIsEnabled
         if col == 0:
+            if layer.type() == QgsMapLayer.RasterLayer and layer.providerType() != 'gdal':
+                return Qt.NoItemFlags
             res = res | Qt.ItemIsEditable | Qt.ItemIsUserCheckable 
         if col == 3:
-            res = res | Qt.ItemIsEditable
+            #res = res | Qt.ItemIsEditable
+            return Qt.NoItemFlags #temp
         return res
             
     def data(self, index, role = Qt.DisplayRole):
@@ -106,6 +120,8 @@ class LayersTableModel(QAbstractTableModel):
         layer = self.layerData[row].layer
         
         if col == 0 and role == Qt.CheckStateRole:
+            if layer.type() == QgsMapLayer.RasterLayer and layer.providerType() != 'gdal':
+                return Qt.Unchecked
             if self.layerData[row].stored:
                 return Qt.Checked
             else: return Qt.Unchecked
@@ -114,8 +130,9 @@ class LayersTableModel(QAbstractTableModel):
             if (role == Qt.DisplayRole):            
                 return layer.name()
                 
-        if col == 2 and role == Qt.DisplayRole:
-            return layer.publicSource()
+        if col == 2:
+            if role == Qt.DisplayRole or role == Qt.ToolTipRole:
+                return layer.publicSource()
                 
         if col == 3 and role == Qt.DisplayRole:
             return self.layerData[row].features

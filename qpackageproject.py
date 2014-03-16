@@ -224,12 +224,22 @@ class QPackageProject:
         return True
     
     def copyRasterLayer(self, layer):
+        gdal.UseExceptions()
         srcPath = layer.source()
-        src = gdal.Open(srcPath)
+        try:
+            src = gdal.Open(srcPath)
+        except:
+            print "GDAL error opening data source", srcPath
+            return
         driver = gdal.GetDriverByName("RASTERLITE")
         tableName = launderName(layer.name())
         dstPath = "RASTERLITE:%s,table=%s" % (self.slPath, tableName)
-        ds = driver.CreateCopy(dstPath, src)
+        # NB : copy doesn't work with geographic SRS
+        try:
+            ds = driver.CreateCopy(dstPath, src, 0)
+        except:
+            print "GDAL error copying data into DB"
+            return
         
         # update project
         layerNode = self.findLayerInProject(layer.id())
@@ -247,5 +257,6 @@ class QPackageProject:
                 return child
             child = child.nextSiblingElement()
         return None
-        
+ 
+# TODO better way to display warnings and errors
     
