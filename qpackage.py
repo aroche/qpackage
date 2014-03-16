@@ -30,6 +30,7 @@ import resources_rc
 from qpackagedialog import qpackageDialog
 import qpackageproject
 import os.path
+import pdb
 
 
 # A comboBox delegate for changing feature selection mode
@@ -204,9 +205,12 @@ class qpackage:
         f = QFile(projectFile)
         if QFile.exists(filePath):
             QFile.remove(filePath)
-        f.copy(filePath)  
-        
-        print os.path.abspath(filePath)
+        try:
+            f.copy(filePath)
+        except:
+            msg = "Impossible to create the new project file"
+            self.iface.messageBar().pushMessage("Error", msg, level=QgsMessageBar.CRITICAL)
+            return
         
         project = qpackageproject.QPackageProject(filePath)
         
