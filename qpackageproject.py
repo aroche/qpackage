@@ -194,6 +194,7 @@ class QPackageProject:
             # show all attributes and their values
             values_perso=[]
             for val in allAttrs: # All except PKUID
+                # TODO force to unicode
                 values_perso.append(feat[val])
             
             #Create line in DB table
