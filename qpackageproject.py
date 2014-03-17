@@ -44,6 +44,8 @@ class QPackageProject:
     def __init__(self, projectFile):
         self.projectFile = projectFile
         
+        self.processedLayers = []
+        
         self.loadProject()
         self.createDB()
         
@@ -221,7 +223,7 @@ class QPackageProject:
         tmpNode = layerNode.firstChildElement("provider")
         #tmpNode.setAttribute("encoding", enc)
         tmpNode.firstChild().setNodeValue("spatialite")
-        
+        self.processedLayers.append(layer.id())
         return True
     
     def copyRasterLayer(self, layer):
@@ -246,8 +248,14 @@ class QPackageProject:
         layerNode = self.findLayerInProject(layer.id())
         tmpNode = layerNode.firstChildElement("datasource")
         tmpNode.firstChild().setNodeValue(dstPath)
-        
+        self.processedLayers.append(layer.id())
         return True
+        
+    # updates the project to set a new data source
+    def changeLayerDataSource(self, layerId, newSource):
+        layerNode = self.findLayerInProject(layerId)
+        tmpNode = layerNode.firstChildElement("datasource")
+        tmpNode.firstChild().setNodeValue(newSource)
         
         
     def findLayerInProject(self, layerId):
@@ -259,5 +267,7 @@ class QPackageProject:
             child = child.nextSiblingElement()
         return None
  
-# TODO better way to display warnings and errors
+# TODO:
+# better way to display warnings and errors
+# check if a data source is used several times, in order not to copy it twice
     
