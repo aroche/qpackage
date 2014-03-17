@@ -98,7 +98,7 @@ class QPackageProject:
             QFile.remove(self.slPath)
         self.dbConnection = db.connect(self.slPath)
         cur = self.dbConnection.cursor()
-        cur.execute("SELECT initspatialmetadata()")
+        cur.execute("SELECT initspatialmetadata(1)")
         self.dbConnection.commit()
         
              
@@ -108,7 +108,7 @@ class QPackageProject:
         selected_ids=[]
         if selected==True :
             if layer.selectedFeatureCount()==0:
-                pop_up_info("No selected item in Qgis layer: %s)"%layer.name(),self.parent)
+                print "No selected item in Qgis layer: %s)"%layer.name(),self.parent
                 return False
             select_ids=layer.selectedFeaturesIds()
 
